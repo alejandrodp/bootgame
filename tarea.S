@@ -4,77 +4,90 @@
 .text
 .word 0xbaad
 
+#define SCREEN_WIDTH  320
+#define SCREEN_HEIGHT 200
+#define XY(x, y)      (SCREEN_WIDTH * (y) + (x))
+
+#define SEG_MAP1  0x17e0
+#define SEG_MAP2  0x27e0
+#define SEG_FLOAT 0x37e0
+#define SEG_VIDEO 0xa000
+
 .global _start
 _start:
 
 init_graphics:
-	mov ah, 0    # Set display mode
-	mov al, 0x13 # 13h = 320x200, 256 colors
-	int  0x10    # Video BIOS Services
+	mov  ah, 0    # Set display mode
+	mov  al, 0x13 # 13h = 320x200, 256 colors
+	int  0x10     # Video BIOS Services
 	# initial draw settings
-	mov ax, 0xA000
-	mov es, ax
+	mov  ax, SEG_VIDEO
+	mov  es, ax
 
-	call reset_screen
+	call clear_screen
 
-	mov ax, 0x17e0
-	mov ds, ax
-	lea si, _binary_map1_bin_start
-	xor di, di
-	lea cx, _binary_map1_bin_size
-	cld
-.load_loop:
-	lodsw
-	es stosw
-	sub cx, 2
-	jnz .load_loop
+	mov  ax, SEG_MAP1
+	mov  ds, ax
+	lea  si, _binary_map1_bin_start
+	xor  di, di
+	mov  bx, SCREEN_HEIGHT
+	mov  cx, SCREEN_WIDTH
+	call copy_rect
 
-	xor ax, ax
-	mov ds, ax
+	mov  ax, SEG_FLOAT
+	mov  ds, ax
+	lea  si, _binary_nave_bin_start
+	mov  di, XY(15, 50)
+	mov  bx, 23
+	mov  cx, 24
+	call copy_rect
+
+	lea  si, _binary_premio_bin_start
+	mov  di, XY(270, 150)
+	mov  bx, 23
+	mov  cx, 24
+	call copy_rect
 
 halt:
 	cli
 	hlt
-	jmp halt
+	jmp  halt
 
-reset_screen:
-	mov cx, 320*200
-	mov di, 0
-	mov al, 0
-	rep stosb
+clear_screen:
+	xor  di, di
+	mov  bx, SCREEN_HEIGHT
+	mov  cx, SCREEN_WIDTH
+	xor  al, al
+
+clear_rect:
+	mov  dx, cx
+	mov  bp, di
+.clear_loop:
+rep	stosb
+	mov  cx, dx
+	add  bp, SCREEN_WIDTH
+	mov  di, bp
+	dec  bx
+	jnz  .clear_loop
 	ret
 
-draw_rect: # di = video index, bx = height, cx = width, al = color
-	mov dx, cx
-	mov si, di
-
-rect_loop:
-	rep stosb
-	mov cx, dx
-	add si, 320
-	mov di, si
-	dec bx
-	jnz rect_loop
+copy_rect: # di = video index, ds:si = offset, bx = height, cx = width
+	mov   dx, cx
+	mov   bp, di
+.copy_loop:
+	lodsb
+	test  al, al
+	jz    .copy_loop.skip
+es	stosb
+	loop .copy_loop
+	jmp  .copy_loop.next
+.copy_loop.skip:
+	inc  di
+	loop .copy_loop
+.copy_loop.next:
+	mov  cx, dx
+	add  bp, SCREEN_WIDTH
+	mov  di, bp
+	dec  bx
+	jnz  .copy_loop
 	ret
-
-
-draw_map:
-
-	mov di, 320*100
-	mov bx, 50
-	mov cx, 20
-	mov al, map_color
-	call draw_rect
-
-	mov di, 320*2+70
-	mov bx, 50
-	mov cx, 20
-	mov al, map_color
-	call draw_rect
-	jmp .
-	
-
-
-#TODO: Mover a .data
-.section .rodata
-map_color: .byte 4

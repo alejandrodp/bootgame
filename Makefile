@@ -14,7 +14,10 @@ run: tarea.img
 tarea.img: boot.bin tarea.bin
 	cat $^ >$@
 
-%.elf: %.s %.ld
+boot.elf: boot.S boot.ld tarea.bin
+	$(CC) $(CFLAGS) -DNUM_SECTORS=`./num_sectors.sh` -T boot.ld -o $@ $<
+
+%.elf: %.S %.ld
 	$(CC) $(CFLAGS) -T $*.ld -o $@ $<
 
 %.bin: %.elf

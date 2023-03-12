@@ -7,10 +7,12 @@ SECTIONS
     *(.text.start)
     *(.text)
     *(.text*)
+    *(.data:boot.o)
+    *(.data*:boot.o)
     *(.rodata)
     *(.rodata*)
 
-    . = ALIGN(512) - 2;
-    KEEP(*(.magic))
+	. = ALIGN(512) - (512 - 446);
+    KEEP(*(.mbr))
   }
 }

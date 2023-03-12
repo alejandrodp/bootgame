@@ -15,7 +15,10 @@
 
 #define PLAYER_WIDTH  24
 #define PLAYER_HEIGHT 23
-#define PLAYER_START  XY(15, 50)
+
+#define PLAYER_START_X 15
+#define PLAYER_START_Y 50
+#define PLAYER_START   XY(PLAYER_START_X, PLAYER_START_Y)
 
 #define TARGET_WIDTH  24
 #define TARGET_HEIGHT 23
@@ -75,20 +78,26 @@ read_keycodes:
 
 key_up:
 	mov  ax, -SCREEN_WIDTH
+	xor  cx, cx
 	jmp  move_player
 
 key_left:
 	mov  ax, -1
+	mov  cx, -1
 	jmp  move_player
 
 key_right:
 	mov  ax, 1
+	mov  cx, 1
 	jmp  move_player
 
 key_down:
 	mov  ax, SCREEN_WIDTH
+	xor  cx, cx
 
 move_player:
+	push cx
+
 	mov  di, player_pos
 	add  ax, di
 	push ax
@@ -121,10 +130,15 @@ move_player:
 	mov  bp, dx
 	dec  bx
 	jnz  .test_collisions
-	jmp  draw_player
+	mov  bp, sp
+	mov  cx, [bp]
+	add  player_x, cx
+	jmp  .out
 
 .collision:
 	mov  di, player_pos
+.out:
+	pop  ax
 	jmp  draw_player
 
 clear_screen:
@@ -177,3 +191,4 @@ es	stosb
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
+player_x:   .word PLAYER_START_X

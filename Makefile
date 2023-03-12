@@ -25,12 +25,12 @@ boot.bin: boot.elf
 	$(OBJCOPY) -O binary --only-section=.mbr $< $@
 
 tarea.bin: tarea.elf
-	$(OBJCOPY) -O binary --only-section=.text $< sprites.text.bin
-	$(OBJCOPY) -O binary --only-section=.map2 $< sprites.map1.bin
-	$(OBJCOPY) -O binary --only-section=.map1 $< sprites.map2.bin
-	cat sprites.text.bin sprites.map1.bin sprites.map2.bin >$@
+	$(OBJCOPY) -O binary --only-section=.text $< tarea.text.bin
+	$(OBJCOPY) -O binary --only-section=.map2 $< tarea.map1.bin
+	$(OBJCOPY) -O binary --only-section=.map1 $< tarea.map2.bin
+	cat tarea.text.bin tarea.map1.bin tarea.map2.bin >$@
 
-%.bin: %.png
+%.bin: %.png png2mode13h.py
 	./png2mode13h.py <$< >$@
 
 %.o: %.bin

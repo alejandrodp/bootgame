@@ -7,7 +7,7 @@
 .section .text.start
 .global _start
 _start:
-	cli # CLear Interrupt flag
+	sti # SeT Interrupt flag
 	cld # CLear Direction flag
 
 	xor  ax, ax

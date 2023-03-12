@@ -6,20 +6,55 @@
 
 .global _start
 _start:
-	push '+'
-	push ('+' << 8) | 0xf0
 
-print:
-	mov  si, sp
-	mov  bl, [si]
-	not  byte ptr [si]
-	mov  ah, 0x13
-	mov  al, 0x01
-	xor  bh, bh
-	mov  cx, 1
-	mov  dh, 10
-	mov  dl, 10
-	mov  bp, si
-	add  bp, 2
-	int  0x10
-	jmp  print
+init_graphics:
+	mov ah, 0    # Set display mode
+	mov al, 0x13 # 13h = 320x200, 256 colors
+	int  0x10    # Video BIOS Services
+	# initial draw settings
+	mov ax, 0xA000
+	mov es, ax
+
+reset_screen:
+	mov cx, 320*200
+	mov di, 0
+	mov ax, 0xA000
+	mov es, ax
+	mov al, 0
+	rep stosb
+	ret
+
+draw_rect: # di = video index, bx = height, cx = width, al = color
+	mov dx, cx
+	mov si, di
+
+rect_loop:
+	rep stosb
+	mov cx, dx
+	add si, 320
+	mov di, si
+	dec bx
+	jnz rect_loop
+	ret
+
+
+draw_map:
+
+	mov di, 320*100
+	mov bx, 50
+	mov cx, 20
+	mov al, map_color
+	call draw_rect
+
+	mov di, 320*2+70
+	mov bx, 50
+	mov cx, 20
+	mov al, map_color
+	call draw_rect
+	jmp .
+	
+
+
+#TODO: Mover a .data
+.section .rodata
+map_color: .byte 4

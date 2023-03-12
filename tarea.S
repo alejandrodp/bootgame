@@ -103,9 +103,24 @@ move_player:
 	push ax
 
 	mov  bx, PLAYER_HEIGHT
+	mov  ax, SEG_FLOAT
+	mov  ds, ax
+	lea  si, _binary_nave_bin_start
+	mov  bp, di
+.clear_player:
 	mov  cx, PLAYER_WIDTH
-	xor  al, al
-	call clear_rect
+.clear_player.row:
+	lodsb
+	test al, al
+	jz   .clear_player.dont_clear
+	mov  byte ptr es:[di], 0
+.clear_player.dont_clear:
+	inc  di
+	loop .clear_player.row
+	add  bp, SCREEN_WIDTH
+	mov  di, bp
+	dec  bx
+	jnz  .clear_player
 
 	pop  di
 	mov  ax, SEG_FLOAT

@@ -3,6 +3,7 @@ SECTIONS
   . = 0;
   .text . : AT(0x07e00)
   {
+    SHORT(0xbaad)
     *(.text)
     *(.text*)
     *(.rodata)

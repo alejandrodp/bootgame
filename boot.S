@@ -1,10 +1,11 @@
 # Para usar notación Intel, no AT&T
 .intel_syntax noprefix
+
 .code16
+.section .text.start
 
 #define TIMEOUT 3
 
-.section .text.start
 .global _start
 _start:
 	sti # SeT Interrupt flag

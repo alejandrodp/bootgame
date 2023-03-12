@@ -1,8 +1,7 @@
 .intel_syntax noprefix
-.code16
 
+.code16
 .text
-.word 0xbaad
 
 #define SCREEN_WIDTH  320
 #define SCREEN_HEIGHT 200

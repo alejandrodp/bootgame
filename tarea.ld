@@ -12,16 +12,23 @@ SECTIONS
   }
 
   . &= 0xffff;
-  .map1 . : AT(0x17e00)
+  .sprites.map1 . : AT(0x17e00)
   {
-	*(.sprites.map1)
+    map1.o(.sprites)
     . = ALIGN(65536);
   }
 
   . &= 0xffff;
-  .map2 . : AT(0x27e00)
+  .sprites.map2 . : AT(0x27e00)
   {
-	*(.sprites.map2)
+    map2.o(.sprites)
     . = ALIGN(65536);
+  }
+
+  . &= 0xffff;
+  .sprites.float . : AT(0x37e00)
+  {
+    nave.o(.sprites)
+    premio.o(.sprites)
   }
 }

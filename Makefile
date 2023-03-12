@@ -18,7 +18,7 @@ tarea.img: boot.bin tarea.bin
 boot.elf: boot.ld boot.S tarea.bin
 	$(CC) $(CFLAGS) `./num_sectors.sh` -o $@ -T boot.ld boot.S
 
-tarea.elf: tarea.ld tarea.S map1.o map2.o
+tarea.elf: tarea.ld tarea.S map1.o map2.o nave.o premio.o
 	$(CC) $(CFLAGS) -o $@ -T $^
 
 boot.bin: boot.elf
@@ -26,12 +26,13 @@ boot.bin: boot.elf
 
 tarea.bin: tarea.elf
 	$(OBJCOPY) -O binary --only-section=.text $< tarea.text.bin
-	$(OBJCOPY) -O binary --only-section=.map2 $< tarea.map1.bin
-	$(OBJCOPY) -O binary --only-section=.map1 $< tarea.map2.bin
-	cat tarea.text.bin tarea.map1.bin tarea.map2.bin >$@
+	$(OBJCOPY) -O binary --only-section=.sprites.map1 $< tarea.map1.bin
+	$(OBJCOPY) -O binary --only-section=.sprites.map2 $< tarea.map2.bin
+	$(OBJCOPY) -O binary --only-section=.sprites.float $< tarea.float.bin
+	cat tarea.text.bin tarea.map1.bin tarea.map2.bin tarea.float.bin >$@
 
 %.bin: %.png png2mode13h.py
 	./png2mode13h.py <$< >$@
 
 %.o: %.bin
-	$(OBJCOPY) -Ibinary -Oelf32-i386 -Bi8086 --rename-section .data=.sprites.$* $< $@
+	$(OBJCOPY) -Ibinary -Oelf32-i386 -Bi8086 --rename-section .data=.sprites $< $@

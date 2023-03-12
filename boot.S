@@ -1,11 +1,12 @@
+# Para usar notación Intel, no AT&T
 .intel_syntax noprefix
 .code16
 
 .section .text.start
 .global _start
 _start:
-	cli
-	cld
+	cli # CLear Interrupt flag
+	cld # CLear Direction flag
 
 	xor  ax, ax
 	jmp  0x0000:on_known_cs
@@ -22,6 +23,7 @@ on_known_cs:
 	# Se necesitará luego
 	push dx
 
+	# Modo texto
 	xor  ah, ah
 	mov  al, 0x03
 	int  0x10

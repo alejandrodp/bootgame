@@ -2,6 +2,8 @@
 .intel_syntax noprefix
 .code16
 
+#define TIMEOUT 3
+
 .section .text.start
 .global _start
 _start:
@@ -43,7 +45,6 @@ on_known_cs:
 	push FIRST_READ_SECTORS
 	push 16
 	push NUM_SECTORS
-
 .read_loop:
 	mov  ax, ss
 	mov  ds, ax
@@ -53,7 +54,7 @@ on_known_cs:
 	lea  si, [bp + 2]
 	int  0x13
 	mov  ax, 0
-	mov  ds, ax # Importante que no sea xor, ya que no toca flags
+	mov  ds, ax # Importante que no sea xor, ya que no debe tocar flags
 	jc   read_error
 	mov  bp, sp
 	mov  ax, [bp + 2 + 2]
@@ -63,12 +64,12 @@ on_known_cs:
 	mov  [bp], bx
 	mov  cx, bx
 	and  cx, 0x7f
-	jz   .read_loop.partial_segment
+	jz   .read_loop.full_segment
 	test bx, ~0x7f
-	jnz  .read_loop.do_read
+	jnz  .read_loop.full_segment
 	mov  bx, cx
 	jmp  .read_loop.do_read
-.read_loop.partial_segment:
+.read_loop.full_segment:
 	mov  bx, 0x80
 .read_loop.do_read:
 	mov  [bp + 2 + 2], bx
@@ -84,8 +85,8 @@ on_known_cs:
 	call print
 
 	mov  ah, 0x86
-	mov  cx, 1000000 >> 16
-	mov  dx, 1000000 & 0xffff
+	mov  cx, (TIMEOUT * 1000000) >> 16
+	mov  dx, (TIMEOUT * 1000000) & 0xffff
 	int  0x15
 	jmp  0x7e02
 
@@ -117,7 +118,7 @@ line: .byte 0
 bootmsg: .ascii "Bootloader!"
 bootmsg.end:
 
-readok: .ascii "Jumping to game..."
+readok: .ascii "Loading game..."
 readok.end:
 
 badread: .ascii "Failed to read boot sectors, halting"

@@ -30,28 +30,67 @@ on_known_cs:
 	lea  bp, bootmsg
 	call print
 
-	mov  ah, 0x02
-	mov  al, NUM_SECTORS
-	xor  ch, ch
-	mov  cl, 2 # Sector 1 en adelante
+	mov  ax, NUM_SECTORS
 	mov  bx, 0x7e00
-	pop  dx
-	xor  dh, dh
+	push 0
+	push 0
+	push 0
+	push 1
+	push 0x07e0
+	push 0
+	push FIRST_READ_SECTORS
+	push 16
+	push NUM_SECTORS
+
+.read_loop:
+	mov  ax, ss
+	mov  ds, ax
+	mov  ah, 0x42
+	mov  bp, sp
+	mov  dx, [bp + 2 + 16]
+	lea  si, [bp + 2]
 	int  0x13
+	mov  ax, 0
+	mov  ds, ax # Importante que no sea xor, ya que no toca flags
 	jc   read_error
+	mov  bp, sp
+	mov  ax, [bp + 2 + 2]
+	mov  bx, [bp]
+	sub  bx, ax
+	jz   .read_loop.end
+	mov  [bp], bx
+	mov  cx, bx
+	and  cx, 0x7f
+	jz   .read_loop.partial_segment
+	test bx, ~0x7f
+	jnz  .read_loop.do_read
+	mov  bx, cx
+	jmp  .read_loop.do_read
+.read_loop.partial_segment:
+	mov  bx, 0x80
+.read_loop.do_read:
+	mov  [bp + 2 + 2], bx
+	add  word ptr [bp + 2 + 6], 0x1000
+	add  [bp + 2 + 8], ax
+	jmp  .read_loop
+.read_loop.end:
+
 	cmp  word ptr [0x7e00], 0xbaad
 	jnz  read_error
-
 	lea  bp, readok
 	mov  cx, readok.end - readok
 	call print
+
+	mov  ah, 0x86
+	mov  cx, 1000000 >> 16
+	mov  dx, 1000000 & 0xffff
+	int  0x15
 	jmp  0x7e02
 
 read_error:
 	lea  bp, badread
 	mov  cx, badread.end - badread
-	push halt
-	jmp  print
+	call print
 
 halt:
 	cli

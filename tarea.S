@@ -15,11 +15,31 @@ init_graphics:
 	mov ax, 0xA000
 	mov es, ax
 
+	call reset_screen
+
+	mov ax, 0x17e0
+	mov ds, ax
+	lea si, _binary_map1_bin_start
+	xor di, di
+	lea cx, _binary_map1_bin_size
+	cld
+.load_loop:
+	lodsw
+	es stosw
+	sub cx, 2
+	jnz .load_loop
+
+	xor ax, ax
+	mov ds, ax
+
+halt:
+	cli
+	hlt
+	jmp halt
+
 reset_screen:
 	mov cx, 320*200
 	mov di, 0
-	mov ax, 0xA000
-	mov es, ax
 	mov al, 0
 	rep stosb
 	ret

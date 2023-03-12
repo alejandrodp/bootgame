@@ -1,3 +1,11 @@
 #!/bin/sh
+set -e
 
-echo $((($(stat -c %s tarea.bin) + 511) / 512))
+NUM_SECTORS=$((($(stat -c %s tarea.bin) + 511) / 512))
+if [ $NUM_SECTORS -ge 128 ]; then
+	FIRST_READ_SECTORS=128
+else
+	FIRST_READ_SECTORS=$NUM_SECTORS
+fi
+
+echo -DNUM_SECTORS=$NUM_SECTORS -DFIRST_READ_SECTORS=$FIRST_READ_SECTORS

@@ -2,7 +2,7 @@ SECTIONS
 {
   . = 0x7c00;
 
-  .image : AT(0x7c00)
+  .mbr : AT(0x7c00)
   {
     *(.text.start)
     *(.text)

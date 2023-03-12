@@ -78,25 +78,26 @@ read_keycodes:
 
 key_up:
 	mov  ax, -SCREEN_WIDTH
-	xor  cx, cx
+	clc  
 	jmp  move_player
 
 key_left:
 	mov  ax, -1
-	mov  cx, -1
+	stc
 	jmp  move_player
 
 key_right:
 	mov  ax, 1
-	mov  cx, 1
+	stc
 	jmp  move_player
 
 key_down:
 	mov  ax, SCREEN_WIDTH
-	xor  cx, cx
+	clc
 
 move_player:
-	push cx
+	push ax
+	pushf
 
 	mov  di, player_pos
 	add  ax, di
@@ -145,16 +146,59 @@ move_player:
 	mov  bp, dx
 	dec  bx
 	jnz  .test_collisions
-	mov  bp, sp
-	mov  cx, [bp]
-	add  player_x, cx
-	jmp  .out
+	jmp  .draw_at_new_position
 
 .collision:
-	mov  di, player_pos
-.out:
 	pop  ax
+	pop  ax
+	mov  di, player_pos
 	jmp  draw_player
+
+.draw_at_new_position:
+	popf
+	pop  ax
+	jnc  draw_player
+	push ax
+
+	push di
+	mov  ax, SCREEN_WIDTH
+	call test_obstaculos
+
+	pop  di
+	push ax
+	push di
+	mov  ax, -SCREEN_WIDTH
+	call test_obstaculos
+
+	pop  di
+	pop  bx
+	pop  cx
+	or   ax, bx
+	jz   .obstaculos_none
+
+	test cx, cx
+	js   .obstaculos_left
+	add  word ptr [obstaculos], 1
+	jmp  draw_player
+.obstaculos_left:
+	sub  word ptr [obstaculos], 1
+.obstaculos_none:
+	jmp  draw_player
+
+test_obstaculos:
+	add  di, ax
+	mov  dl, es:[di]
+	cmp  dl, 0x04 #0x10
+	je   .not_found
+	cmp  dl, 0x28
+	je   .found
+	jmp  test_obstaculos
+.found:
+	mov  ax, 1
+	ret
+.not_found:
+	xor  ax, ax
+	ret
 
 clear_screen:
 	xor  di, di
@@ -206,4 +250,4 @@ es	stosb
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
-player_x:   .word PLAYER_START_X
+obstaculos: .word 0

@@ -187,7 +187,7 @@ move_player:
 test_obstaculos:
 	add  di, ax
 	mov  dl, es:[di]
-	cmp  dl, 0x04 #0x10
+	cmp  dl, 0x12
 	je   .not_found
 	cmp  dl, 0x28
 	je   .found

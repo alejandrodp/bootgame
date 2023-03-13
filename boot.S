@@ -8,21 +8,19 @@
 
 .global _start
 _start:
-	sti # SeT Interrupt flag
-	cld # CLear Direction flag
-
-	xor  ax, ax
 	jmp  0x0000:on_known_cs
 
 .text
 on_known_cs:
+	cld # CLear Direction flag
+	xor  ax, ax
 	mov  ds, ax
 	mov  es, ax
 
 	# Stack inicia en 0x80000 (fin de RAM convencional)
 	mov  ax, 0x7000
 	mov  ss, ax
-	xor  sp, sp
+	mov  sp, 0xfffe
 	# Se necesitará luego
 	push dx
 
@@ -33,6 +31,21 @@ on_known_cs:
 
 	mov  cx, bootmsg.end - bootmsg
 	lea  bp, bootmsg
+	call print
+
+	pop  dx
+	test dl, 0x80
+	jnz  .dl_is_harddrive
+	mov  cx, baddl.end - baddl
+	lea  bp, baddl
+	call print
+	jmp  halt
+
+.dl_is_harddrive:
+	push dx
+
+	mov  cx, loading.end - loading
+	lea  bp, loading
 	call print
 
 	mov  ax, NUM_SECTORS
@@ -80,7 +93,7 @@ on_known_cs:
 .read_loop.end:
 
 	cmp  word ptr [0x7e00], 0xbaad
-	jnz  read_error
+	jnz  magic_error
 	lea  bp, readok
 	mov  cx, readok.end - readok
 	call print
@@ -94,6 +107,12 @@ on_known_cs:
 read_error:
 	lea  bp, badread
 	mov  cx, badread.end - badread
+	call print
+	jmp  halt
+
+magic_error:
+	lea  bp, badmagic
+	mov  cx, badmagic.end - badmagic
 	call print
 
 halt:
@@ -119,11 +138,20 @@ line: .byte 0
 bootmsg: .ascii "Bootloader!"
 bootmsg.end:
 
-readok: .ascii "Loading game..."
+loading: .ascii "Loading game..."
+loading.end:
+
+readok: .ascii "Booting game..."
 readok.end:
 
-badread: .ascii "Failed to read boot sectors, halting"
+badread: .ascii "Error: failed to read boot sectors, halting"
 badread.end:
+
+baddl: .ascii "Error: BIOS emulates boot drive as floppy"
+baddl.end:
+
+badmagic: .ascii "Error: bad payload magic"
+badmagic.end:
 
 .section .mbr
 

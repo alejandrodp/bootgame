@@ -264,4 +264,4 @@ palette.putpalette([
     ])
 
 with PIL.Image.open(sys.stdin.buffer) as image:
-  sys.stdout.buffer.write(image.convert('RGB').quantize(palette=palette).tobytes())
+  sys.stdout.buffer.write(bytes(image.convert('RGB').quantize(palette=palette).getdata()))

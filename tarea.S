@@ -64,6 +64,14 @@ read_keycodes:
 	push bx
 	mov  ah, 0x10
 	int  0x16
+	cmp  ah, 0x13
+	je   triple_fault
+	cmp  ah, 0x26
+	je   toggle_pause
+
+	test byte ptr [pause], 1
+	jnz  .ignore_keypress
+
 	cmp  ah, 0x48
 	je   key_up
 	cmp  ah, 0x4b
@@ -72,7 +80,13 @@ read_keycodes:
 	je   key_right
 	cmp  ah, 0x50
 	je   key_down
+
+.ignore_keypress:
 	# Bucle, no es un ret real
+	ret
+
+toggle_pause:
+	not  byte ptr pause
 	ret
 
 key_up:
@@ -137,7 +151,7 @@ move_player:
 	test al, al
 	jz   .test_collisions.row.next
 	test ah, ah
-	jnz  .collision
+	jnz  triple_fault
 .test_collisions.row.next:
 	inc  bp
 	loop .test_collisions.row
@@ -187,7 +201,7 @@ move_player:
 test_obstaculos:
 	add  di, ax
 	mov  dl, es:[di]
-	cmp  dl, 0x04 #0x10
+	cmp  dl, 0x12
 	je   .not_found
 	cmp  dl, 0x28
 	je   .found
@@ -246,7 +260,17 @@ es	stosb
 	jnz  .copy_loop
 	ret
 
+# Magia
+triple_fault:
+	push 0
+	push 0
+	push 0
+	mov  bp, sp
+	lidt [bp]
+	int  0x69
+
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
 obstaculos: .word 0
+pause:      .byte 0

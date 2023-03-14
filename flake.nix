@@ -60,6 +60,7 @@
         packages = with pkgs; [
           gnumake
           qemu
+          gdb
         ];
 
         inputsFrom = [ bootgame ];

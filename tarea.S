@@ -51,8 +51,8 @@ init_graphics:
 	call set_timeout
 
 	mov  ax, map_seg
-	mov  ds, ax
 	mov  si, map_start
+	mov  ds, ax
 	xor  di, di
 	mov  bx, SCREEN_HEIGHT
 	mov  cx, SCREEN_WIDTH
@@ -111,7 +111,7 @@ main_loop:
 	ret
 
 toggle_pause:
-	not  byte ptr pause
+	xor  byte ptr [pause], 1
 	jnz  stop_timer
 	jmp  set_timeout
 
@@ -225,8 +225,13 @@ move_player:
 .collision:
 	cmp  ah, 0x50
 	jne  triple_fault
+
 	xor  ax, ax
 	mov  ds, ax
+	
+	xor  byte ptr [last_level], 1
+	jz   win
+
 	lea  ax, [_binary_map2_bin_start]
 	mov  word ptr map_seg, SEG_MAP2
 	mov  map_start, ax
@@ -438,6 +443,20 @@ clear_text:
 	mov  word ptr [text_caret], TEXT_TOP
 	ret
 
+win:
+	call clear_text
+
+	lea  si, txt_winner
+	call putstr
+	
+	mov  ah, 0x86
+	mov  cx, (1000000 >> 16)
+	mov  dx, (1000000 & 0xffff)
+	int  0x15
+
+	jmp triple_fault 
+
+
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
@@ -451,6 +470,7 @@ pause:      .byte 0
 timeout_ev: .byte 0
 timer:      .byte 30
 timer_decs: .byte 10
+last_level: .byte 0
 
 txt_map:    .asciz "Nivel: "
 txt_timer:  .asciz " | Tiempo: "
@@ -458,3 +478,4 @@ txt_points: .asciz "s\nObstaculos superados: "
 txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
 txt_map1:   .asciz "Principiante"
 txt_map2:   .asciz "Avanzado"
+txt_winner: .asciz "\n         Felicidades, ha ganado         "

@@ -449,11 +449,11 @@ text_caret: .word TEXT_TOP
 map_name:   .word txt_map1
 pause:      .byte 0
 timeout_ev: .byte 0
-timer:      .byte 30
+timer:      .byte 32
 timer_decs: .byte 10
 
 txt_map:    .asciz "Nivel: "
-txt_timer:  .asciz " | Tiempo: "
+txt_timer:  .asciz "        Tiempo: "
 txt_points: .asciz "s\nObstaculos superados: "
 txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
 txt_map1:   .asciz "Principiante"

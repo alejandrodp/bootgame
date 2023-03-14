@@ -33,6 +33,11 @@
 #define TEXT_AREA_WIDTH  (SCREEN_WIDTH - TEXT_TOP_X)
 #define TEXT_AREA_HEIGHT (30 - TEXT_TOP_Y)
 
+#define COLOR_BORDER_A  0x12
+#define COLOR_BORDER_B  0x04
+#define COLOR_OBSTACULO 0x28
+#define COLOR_TARGET    0x50
+
 .global _start
 _start:
 	# Esto hace algo luego del primer nivel
@@ -117,7 +122,7 @@ main_loop:
 	je   key_left
 	cmp  ah, 0x4d
 	je   key_right
-	cmp  ah, 0x50
+	cmp  ah, COLOR_TARGET
 	je   key_down
 
 .ignore_keypress:
@@ -192,24 +197,8 @@ move_player:
 	push ax
 
 	mov  bx, PLAYER_HEIGHT
-	mov  ax, SEG_FLOAT
-	mov  ds, ax
-	lea  si, [_binary_nave_bin_start]
-	mov  bp, di
-.clear_player:
 	mov  cx, PLAYER_WIDTH
-.clear_player.row:
-	lodsb
-	test al, al
-	jz   .clear_player.dont_clear
-	mov  byte ptr es:[di], 0
-.clear_player.dont_clear:
-	inc  di
-	loop .clear_player.row
-	add  bp, SCREEN_WIDTH
-	mov  di, bp
-	dec  bx
-	jnz  .clear_player
+	call clear_rect
 
 	pop  di
 	mov  ax, SEG_FLOAT
@@ -225,8 +214,14 @@ move_player:
 	mov  ah, es:[bp]
 	test al, al
 	jz   .test_collisions.row.next
-	test ah, ah
-	jnz  .collision
+	cmp  ah, COLOR_BORDER_A
+	je   triple_fault
+	cmp  ah, COLOR_BORDER_B
+	je   triple_fault
+	cmp  ah, COLOR_OBSTACULO
+	je   triple_fault
+	cmp  ah, COLOR_TARGET
+	je   next_level
 .test_collisions.row.next:
 	inc  bp
 	loop .test_collisions.row
@@ -234,30 +229,6 @@ move_player:
 	mov  bp, dx
 	dec  bx
 	jnz  .test_collisions
-	jmp  .draw_at_new_position
-
-.collision:
-	cmp  ah, 0x50
-	jne  triple_fault
-
-	xor  ax, ax
-	mov  ds, ax
-	
-	xor  byte ptr [last_level], 1
-	jz   win
-
-	lea  ax, [_binary_map2_bin_start]
-	mov  word ptr map_seg, SEG_MAP2
-	mov  map_start, ax
-	lea  ax, txt_map2
-	mov  map_name, ax
-
-	call stop_timer
-	mov  byte ptr timer, 74
-	mov  byte ptr [timer_decs], 10
-	mov  byte ptr [timeout_ev], 0
-
-	jmp  _start
 
 .draw_at_new_position:
 	xor  ax, ax
@@ -294,12 +265,33 @@ move_player:
 	call draw_player
 	jmp  update_stats
 
+next_level:
+	xor  ax, ax
+	mov  ds, ax
+	xor  byte ptr [last_level], 1
+	jz   win
+
+	lea  ax, [_binary_map2_bin_start]
+	mov  word ptr map_seg, SEG_MAP2
+	mov  map_start, ax
+	lea  ax, txt_map2
+	mov  map_name, ax
+
+	call stop_timer
+	mov  byte ptr timer, 74
+	mov  byte ptr [timer_decs], 10
+	mov  byte ptr [timeout_ev], 0
+
+	jmp  _start
+
 test_obstaculos:
 	add  di, ax
 	mov  dl, es:[di]
-	cmp  dl, 0x12
+	cmp  dl, COLOR_BORDER_A
 	je   .not_found
-	cmp  dl, 0x28
+	cmp  dl, COLOR_BORDER_B
+	je   .not_found
+	cmp  dl, COLOR_OBSTACULO
 	je   .found
 	jmp  test_obstaculos
 .found:

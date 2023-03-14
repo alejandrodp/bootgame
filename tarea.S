@@ -375,6 +375,6 @@ map_name:   .word txt_map1
 
 txt_map:    .asciz "Nivel: "
 txt_points: .asciz "\nObstaculos superados: "
-txt_help:   .asciz "\nComandos: Flechas del teclado"
+txt_help:   .asciz "\nComandos: Flechas, l(pausa), r(reinicar)"
 txt_map1:   .asciz "Principiante"
 txt_map2:   .asciz "Avanzado"

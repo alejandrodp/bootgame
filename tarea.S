@@ -60,6 +60,12 @@ init_graphics:
 	mov  di, PLAYER_START
 	call draw_player
 
+	call stop_timer
+	mov  ah, 0x86
+	mov  cx, (200000 >> 16)
+	mov  dx, (200000 & 0xffff)
+	int  0x15
+
 .clear_keys:
 	mov  ah, 0x11
 	int  0x16

@@ -238,9 +238,8 @@ move_player:
 	lea  ax, txt_map2
 	mov  map_name, ax
 
-	# Cancelar timer
 	call stop_timer
-	mov  byte ptr timer, 60
+	mov  byte ptr timer, 74
 	mov  byte ptr [timer_decs], 10
 	mov  byte ptr [timeout_ev], 0
 
@@ -448,10 +447,12 @@ win:
 
 	lea  si, txt_winner
 	call putstr
+
+	call stop_timer
 	
 	mov  ah, 0x86
-	mov  cx, (1000000 >> 16)
-	mov  dx, (1000000 & 0xffff)
+	mov  cx, (5000000 >> 16)
+	mov  dx, (5000000 & 0xffff)
 	int  0x15
 
 	jmp triple_fault 

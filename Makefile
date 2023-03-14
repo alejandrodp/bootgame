@@ -18,7 +18,7 @@ tarea.img: boot.bin tarea.bin
 boot.elf: boot.ld boot.S tarea.bin
 	$(CC) $(CFLAGS) `./num_sectors.sh` -o $@ -T boot.ld boot.S
 
-tarea.elf: tarea.ld tarea.S map1.o map2.o nave.o premio.o
+tarea.elf: tarea.ld tarea.S map1.o map2.o nave.o
 	$(CC) $(CFLAGS) -o $@ -N -T $^
 
 boot.bin: boot.elf

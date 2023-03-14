@@ -24,6 +24,8 @@
 
 .global _start
 _start:
+	# Esto hace algo luego del primer nivel
+	mov  word ptr [obstaculos], 0
 
 init_graphics:
 	mov  ah, 0    # Set display mode
@@ -35,9 +37,9 @@ init_graphics:
 
 	call clear_screen
 
-	mov  ax, SEG_MAP1
+	mov  ax, map_seg
 	mov  ds, ax
-	lea  si, _binary_map1_bin_start
+	mov  si, map_start
 	xor  di, di
 	mov  bx, SCREEN_HEIGHT
 	mov  cx, SCREEN_WIDTH
@@ -45,12 +47,6 @@ init_graphics:
 
 	mov  di, PLAYER_START
 	call draw_player
-
-#	lea  si, _binary_premio_bin_start
-#	mov  di, XY(270, 150)
-#	mov  bx, TARGET_HEIGHT
-#	mov  cx, TARGET_WIDTH
-#	call copy_rect
 
 read_keycodes:
 	call .fix_ip
@@ -64,6 +60,7 @@ read_keycodes:
 	push bx
 	mov  ah, 0x10
 	int  0x16
+
 	cmp  ah, 0x13
 	je   triple_fault
 	cmp  ah, 0x26
@@ -119,7 +116,7 @@ move_player:
 	mov  bx, PLAYER_HEIGHT
 	mov  ax, SEG_FLOAT
 	mov  ds, ax
-	lea  si, _binary_nave_bin_start
+	lea  si, [_binary_nave_bin_start]
 	mov  bp, di
 .clear_player:
 	mov  cx, PLAYER_WIDTH
@@ -139,7 +136,7 @@ move_player:
 	pop  di
 	mov  ax, SEG_FLOAT
 	mov  ds, ax
-	lea  si, _binary_nave_bin_start
+	lea  si, [_binary_nave_bin_start]
 	mov  bx, PLAYER_HEIGHT
 	mov  bp, di
 	mov  dx, di
@@ -151,7 +148,7 @@ move_player:
 	test al, al
 	jz   .test_collisions.row.next
 	test ah, ah
-	jnz  triple_fault
+	jnz  .collision
 .test_collisions.row.next:
 	inc  bp
 	loop .test_collisions.row
@@ -162,12 +159,19 @@ move_player:
 	jmp  .draw_at_new_position
 
 .collision:
-	pop  ax
-	pop  ax
-	mov  di, player_pos
-	jmp  draw_player
+	cmp  al, 0x50
+	jne  triple_fault
+	xor  ax, ax
+	mov  ds, ax
+	lea  ax, [_binary_map2_bin_start]
+	mov  word ptr map_seg, SEG_MAP2
+	mov  map_start, ax
+	jmp  _start
 
 .draw_at_new_position:
+	xor  ax, ax
+	mov  ds, ax
+
 	popf
 	pop  ax
 	jnc  draw_player
@@ -232,10 +236,12 @@ rep	stosb
 	ret
 
 draw_player:
+	xor  ax, ax
+	mov  ds, ax
+	mov  player_pos, di
 	mov  ax, SEG_FLOAT
 	mov  ds, ax
-	lea  si, _binary_nave_bin_start
-	mov  player_pos, di
+	lea  si, [_binary_nave_bin_start]
 	mov  bx, PLAYER_HEIGHT
 	mov  cx, PLAYER_WIDTH
 
@@ -258,6 +264,8 @@ es	stosb
 	mov  di, bp
 	dec  bx
 	jnz  .copy_loop
+	xor  ax, ax
+	mov  ds, ax
 	ret
 
 # Magia
@@ -267,10 +275,13 @@ triple_fault:
 	push 0
 	mov  bp, sp
 	lidt [bp]
-	int  0x69
+	xor  ax, ax
+	div  ax
 
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
 obstaculos: .word 0
 pause:      .byte 0
+map_seg:    .word SEG_MAP1
+map_start:  .word _binary_map1_bin_start

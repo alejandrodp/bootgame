@@ -1,6 +1,6 @@
 SECTIONS
 {
-  . = 0;
+  . = 0x7e00;
   .text . : AT(0x07e00)
   {
     SHORT(0xbaad)
@@ -9,10 +9,10 @@ SECTIONS
     *(.rodata)
     *(.rodata*)
 
-    . = ALIGN(65536);
+    . = 0x10000;
   }
 
-  . &= 0xffff;
+  . = 0;
   .sprites.map1 . : AT(0x17e00)
   {
     map1.o(.sprites)
@@ -30,6 +30,5 @@ SECTIONS
   .sprites.float . : AT(0x37e00)
   {
     nave.o(.sprites)
-    premio.o(.sprites)
   }
 }

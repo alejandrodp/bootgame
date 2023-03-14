@@ -102,6 +102,9 @@ on_known_cs:
 	mov  cx, (TIMEOUT * 1000000) >> 16
 	mov  dx, (TIMEOUT * 1000000) & 0xffff
 	int  0x15
+
+	xor  ax, ax
+	mov  ds, ax
 	jmp  0x7e02
 
 read_error:

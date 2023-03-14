@@ -89,12 +89,15 @@ main_loop:
 	push bx
 
 .loop:
+	cmp  byte ptr [panic_after_stats], 0
+	jne  update_stats
+
 	mov  bp, sp
 	mov  bx, [bp]
 	push bx
 
 .test_timer:
-	test byte ptr timeout_ev, 0x80
+	test byte ptr [timeout_ev], 0x80
 	jz   .test_key
 	call timed_out
 
@@ -245,26 +248,25 @@ move_player:
 	mov  byte ptr [panic_after_stats], 1
 
 .draw_at_new_position:
+	mov  [player_pos], di
+
 	popf
 	pop  ax
-	jnc  draw_player
+	jnc  .redraw_or_stats
 	push ax
 
-	push di
 	mov  ax, SCREEN_WIDTH
 	call test_obstaculos
-
-	pop  di
 	push ax
-	push di
+
+	mov  di, [player_pos]
 	mov  ax, -SCREEN_WIDTH
 	call test_obstaculos
 
-	pop  di
 	pop  bx
 	pop  cx
 	or   ax, bx
-	jz   draw_player
+	jz   .redraw_or_stats
 
 	test cx, cx
 	js   .obstaculos_left
@@ -273,8 +275,11 @@ move_player:
 .obstaculos_left:
 	sub  word ptr [obstaculos], 1
 .obstaculos.update:
-	call draw_player
 	jmp  update_stats
+.redraw_or_stats:
+	cmp  di, XY(0, TEXT_TOP_Y + TEXT_AREA_HEIGHT)
+	jb   update_stats
+	jmp  draw_player
 
 next_level:
 	xor  ax, ax
@@ -283,7 +288,7 @@ next_level:
 	jz   win
 
 	lea  ax, [_binary_map2_bin_start]
-	mov  word ptr map_seg, SEG_MAP2
+	mov  word ptr [map_seg], SEG_MAP2
 	mov  map_start, ax
 	lea  ax, txt_map2
 	mov  map_name, ax
@@ -292,6 +297,7 @@ next_level:
 	mov  byte ptr timer, 74
 	mov  byte ptr [timer_decs], 10
 	mov  byte ptr [timeout_ev], 0
+	mov  word ptr [player_pos], PLAYER_START
 
 	jmp  _start
 
@@ -350,7 +356,7 @@ clear_rect: # di = video index, bx = height, cx = width
 draw_player:
 	xor  ax, ax
 	mov  ds, ax
-	mov  player_pos, di
+	mov  di, player_pos
 	lea  si, [_binary_1_bin_start]
 	mov  ax, player_sprite_offset
 	add  si, ax
@@ -488,7 +494,7 @@ update_stats:
 	lea  si, txt_lost
 	cmp  byte ptr [panic_after_stats], 0
 	jne  lose
-	ret
+	jmp  draw_player
 
 clear_text:
 	mov  di, TEXT_TOP

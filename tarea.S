@@ -48,6 +48,7 @@ init_graphics:
 
 	call clear_screen
 	call update_stats
+	call set_timeout
 
 	mov  ax, map_seg
 	mov  ds, ax
@@ -60,16 +61,31 @@ init_graphics:
 	mov  di, PLAYER_START
 	call draw_player
 
-read_keycodes:
+main_loop:
 	call .fix_ip
 .fix_ip:
 	pop  bx
 	add  bx, .loop - .fix_ip
 	push bx
+
 .loop:
 	mov  bp, sp
 	mov  bx, [bp]
 	push bx
+
+.test_timer:
+	test byte ptr timeout_ev, 0x80
+	jz   .test_key
+	call timed_out
+
+.test_key:
+	mov  ah, 0x11
+	int  0x16
+	jnz  .handle_key
+	hlt
+	jmp  .test_timer
+
+.handle_key:
 	mov  ah, 0x10
 	int  0x16
 
@@ -96,6 +112,42 @@ read_keycodes:
 
 toggle_pause:
 	not  byte ptr pause
+	jnz  stop_timer
+	jmp  set_timeout
+
+timed_out:
+	mov  byte ptr [timeout_ev], 0
+	cmp  byte ptr [pause], 0
+	jne  .frozen
+	dec  byte ptr [timer_decs]
+	jnz  .not_decs
+	mov  byte ptr [timer_decs], 10
+	dec  byte ptr [timer]
+	jz   triple_fault
+	call update_stats
+.not_decs:
+	jmp  set_timeout
+.frozen:
+	ret
+
+stop_timer:
+	mov  ah, 0x83
+	mov  al, 0x01
+	int  0x15
+	mov  byte ptr [timeout_ev], 0
+	ret
+
+set_timeout:
+	mov  ah, 0x83
+	xor  al, al
+	mov  cx, (100000 >> 16)
+	mov  dx, (100000 & 0xffff)
+	push es
+	mov  bx, ds
+	mov  es, bx
+	lea  bx, timeout_ev
+	int  0x15
+	pop  es
 	ret
 
 key_up:
@@ -180,6 +232,13 @@ move_player:
 	mov  map_start, ax
 	lea  ax, txt_map2
 	mov  map_name, ax
+
+	# Cancelar timer
+	call stop_timer
+	mov  byte ptr timer, 60
+	mov  byte ptr [timer_decs], 10
+	mov  byte ptr [timeout_ev], 0
+
 	jmp  _start
 
 .draw_at_new_position:
@@ -308,11 +367,22 @@ putstr:
 	add  sp, 2
 	ret
 
-putdigit:
-	mov  cx, ax
+putdecimal:
+	cmp  ax, 100
+	jae  .bad_digit
+	cmp  ax, 10
+	jb   .last_digit
+	mov  cl, 10
+	div  cl
+	push ax
 	add  al, '0'
-	cmp  cx, 10
-	jb   putchar
+	call putchar
+	pop  ax
+	mov  al, ah
+.last_digit:
+	add  al, '0'
+	jmp  putchar
+.bad_digit:
 	mov  al, '?'
 
 putchar:
@@ -324,6 +394,7 @@ putchar:
 	mov  ds, bx
 	lea  si, _binary_font_bin_start
 	xor  ah, ah
+	and  al, 0x7f # ASCII solo tiene 128 caracteres
 	shl  ax, TEXT_SHIFT
 	add  si, ax
 	mov  bx, TEXT_HEIGHT
@@ -344,10 +415,15 @@ update_stats:
 	mov  si, map_name
 	call putstr
 
+	lea  si, txt_timer
+	call putstr
+	mov  al, timer
+	call putdecimal
+
 	lea  si, txt_points
 	call putstr
 	mov  ax, obstaculos
-	call putdigit
+	call putdecimal
 
 	lea  si, txt_help
 	jmp  putstr
@@ -366,15 +442,19 @@ clear_text:
 .section .rodata
 player_pos: .word PLAYER_START
 obstaculos: .word 0
-pause:      .byte 0
 map_seg:    .word SEG_MAP1
 map_start:  .word _binary_map1_bin_start
 text_pos:   .word TEXT_TOP
 text_caret: .word TEXT_TOP
 map_name:   .word txt_map1
+pause:      .byte 0
+timeout_ev: .byte 0
+timer:      .byte 30
+timer_decs: .byte 10
 
 txt_map:    .asciz "Nivel: "
-txt_points: .asciz "\nObstaculos superados: "
+txt_timer:  .asciz " | Tiempo: "
+txt_points: .asciz "s\nObstaculos superados: "
 txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
 txt_map1:   .asciz "Principiante"
 txt_map2:   .asciz "Avanzado"

@@ -47,7 +47,6 @@ init_graphics:
 	mov  es, ax
 
 	call clear_screen
-	call update_stats
 	call set_timeout
 
 	mov  ax, map_seg
@@ -60,6 +59,14 @@ init_graphics:
 
 	mov  di, PLAYER_START
 	call draw_player
+
+	lea  si, txt_start
+	call putstr
+	mov  ah, 0x10
+	int  0x16
+
+	call clear_text
+	call update_stats
 
 main_loop:
 	call .fix_ip
@@ -480,3 +487,4 @@ txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
 txt_map1:   .asciz "Principiante"
 txt_map2:   .asciz "Avanzado"
 txt_winner: .asciz "\n         Felicidades, ha ganado         "
+txt_start:  .asciz "Presione cualquier tecla para iniciar"

@@ -446,7 +446,6 @@ putchar:
 	mov  ds, bx
 	lea  si, _binary_font_bin_start
 	xor  ah, ah
-	and  al, 0x7f # ASCII solo tiene 128 caracteres
 	shl  ax, TEXT_SHIFT
 	add  si, ax
 	mov  bx, TEXT_HEIGHT
@@ -549,12 +548,12 @@ panic_after_stats:    .byte 0
 
 txt_map:     .asciz "Nivel: "
 txt_timer:   .asciz "         Tiempo: "
-txt_points:  .asciz "s\nObstaculos superados: "
+txt_points:  .asciz "s\nObst\240culos superados: "
 txt_paused:  .asciz "     [PAUSA]"
 txt_help:    .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
 txt_map1:    .asciz "Principiante"
 txt_map2:    .asciz "Avanzado"
-txt_winner:  .asciz "\n         Felicidades, ha ganado!        "
-txt_lost:    .asciz "\n         Felicidades, ha perdido!       "
-txt_timeout: .asciz "\n   Felicidades, se le agoto el tiempo!  "
-txt_start:   .asciz "Presione cualquier tecla para iniciar"
+txt_winner:  .asciz "\n        \255Felicidades, ha ganado!"
+txt_lost:    .asciz "\n        \255Felicidades, ha perdido!"
+txt_timeout: .asciz "\n  \255Felicidades, se le agot\242 el tiempo!"
+txt_start:   .asciz "\1Presione cualquier tecla para iniciar\1"

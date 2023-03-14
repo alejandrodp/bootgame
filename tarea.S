@@ -22,6 +22,13 @@
 #define TARGET_WIDTH  24
 #define TARGET_HEIGHT 23
 
+#define TEXT_TOP_X   1
+#define TEXT_TOP_Y   1
+#define TEXT_WIDTH   8
+#define TEXT_HEIGHT  8
+#define TEXT_SHIFT   6 // log2(8 * 8)
+#define TEXT_KERNING 0
+
 .global _start
 _start:
 	# Esto hace algo luego del primer nivel
@@ -36,6 +43,9 @@ init_graphics:
 	mov  es, ax
 
 	call clear_screen
+
+	lea  si, hello
+	call putstr
 
 	mov  ax, map_seg
 	mov  ds, ax
@@ -159,7 +169,7 @@ move_player:
 	jmp  .draw_at_new_position
 
 .collision:
-	cmp  al, 0x50
+	cmp  ah, 0x50
 	jne  triple_fault
 	xor  ax, ax
 	mov  ds, ax
@@ -278,6 +288,34 @@ triple_fault:
 	xor  ax, ax
 	div  ax
 
+putstr:
+	push si
+.char_loop:
+	mov  al, [si]
+	test al, al
+	jz   .char_loop.end
+	call putchar
+	mov  bp, sp
+	inc  word ptr [bp]
+	mov  si, [bp]
+	jmp  .char_loop
+.char_loop.end:
+	add  sp, 2
+	ret
+
+putchar:
+	mov  di, text_pos
+	add  word ptr [text_pos], TEXT_WIDTH + TEXT_KERNING
+	mov  bx, SEG_FLOAT
+	mov  ds, bx
+	lea  si, _binary_font_bin_start
+	xor  ah, ah
+	shl  ax, TEXT_SHIFT
+	add  si, ax
+	mov  bx, TEXT_HEIGHT
+	mov  cx, TEXT_WIDTH
+	jmp  copy_rect
+
 #TODO: debería ser .data
 .section .rodata
 player_pos: .word PLAYER_START
@@ -285,3 +323,5 @@ obstaculos: .word 0
 pause:      .byte 0
 map_seg:    .word SEG_MAP1
 map_start:  .word _binary_map1_bin_start
+text_pos:   .word XY(TEXT_TOP_X, TEXT_TOP_Y)
+hello:      .asciz "Hello, world!"

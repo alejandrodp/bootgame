@@ -29,6 +29,7 @@ SECTIONS
   . &= 0xffff;
   .sprites.float . : AT(0x37e00)
   {
+    font.o(.sprites)
     nave.o(.sprites)
   }
 }

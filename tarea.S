@@ -24,10 +24,14 @@
 
 #define TEXT_TOP_X   1
 #define TEXT_TOP_Y   1
+#define TEXT_TOP     XY(TEXT_TOP_X, TEXT_TOP_Y)
 #define TEXT_WIDTH   8
 #define TEXT_HEIGHT  8
 #define TEXT_SHIFT   6 // log2(8 * 8)
 #define TEXT_KERNING 0
+
+#define TEXT_AREA_WIDTH  (SCREEN_WIDTH - TEXT_TOP_X)
+#define TEXT_AREA_HEIGHT (30 - TEXT_TOP_Y)
 
 .global _start
 _start:
@@ -43,9 +47,7 @@ init_graphics:
 	mov  es, ax
 
 	call clear_screen
-
-	lea  si, hello
-	call putstr
+	call update_stats
 
 	mov  ax, map_seg
 	mov  ds, ax
@@ -176,6 +178,8 @@ move_player:
 	lea  ax, [_binary_map2_bin_start]
 	mov  word ptr map_seg, SEG_MAP2
 	mov  map_start, ax
+	lea  ax, txt_map2
+	mov  map_name, ax
 	jmp  _start
 
 .draw_at_new_position:
@@ -201,16 +205,17 @@ move_player:
 	pop  bx
 	pop  cx
 	or   ax, bx
-	jz   .obstaculos_none
+	jz   draw_player
 
 	test cx, cx
 	js   .obstaculos_left
 	add  word ptr [obstaculos], 1
-	jmp  draw_player
+	jmp  .obstaculos.update
 .obstaculos_left:
 	sub  word ptr [obstaculos], 1
-.obstaculos_none:
-	jmp  draw_player
+.obstaculos.update:
+	call draw_player
+	jmp  update_stats
 
 test_obstaculos:
 	add  di, ax
@@ -303,7 +308,16 @@ putstr:
 	add  sp, 2
 	ret
 
+putdigit:
+	mov  cx, ax
+	add  al, '0'
+	cmp  cx, 10
+	jb   putchar
+	mov  al, '?'
+
 putchar:
+	cmp  al, '\n'
+	je   .newline
 	mov  di, text_pos
 	add  word ptr [text_pos], TEXT_WIDTH + TEXT_KERNING
 	mov  bx, SEG_FLOAT
@@ -315,6 +329,38 @@ putchar:
 	mov  bx, TEXT_HEIGHT
 	mov  cx, TEXT_WIDTH
 	jmp  copy_rect
+.newline:
+	mov  ax, word ptr [text_caret]
+	add  ax, (TEXT_HEIGHT + TEXT_KERNING) * SCREEN_WIDTH
+	mov  word ptr [text_pos], ax
+	mov  word ptr [text_caret], ax
+	ret
+
+update_stats:
+	call clear_text
+
+	lea  si, txt_map
+	call putstr
+	mov  si, map_name
+	call putstr
+
+	lea  si, txt_points
+	call putstr
+	mov  ax, obstaculos
+	call putdigit
+
+	lea  si, txt_help
+	jmp  putstr
+
+clear_text:
+	mov  di, TEXT_TOP
+	mov  bx, TEXT_AREA_HEIGHT
+	mov  cx, TEXT_AREA_WIDTH
+	xor  al, al
+	call clear_rect
+	mov  word ptr [text_pos], TEXT_TOP
+	mov  word ptr [text_caret], TEXT_TOP
+	ret
 
 #TODO: debería ser .data
 .section .rodata
@@ -323,5 +369,12 @@ obstaculos: .word 0
 pause:      .byte 0
 map_seg:    .word SEG_MAP1
 map_start:  .word _binary_map1_bin_start
-text_pos:   .word XY(TEXT_TOP_X, TEXT_TOP_Y)
-hello:      .asciz "Hello, world!"
+text_pos:   .word TEXT_TOP
+text_caret: .word TEXT_TOP
+map_name:   .word txt_map1
+
+txt_map:    .asciz "Nivel: "
+txt_points: .asciz "\nObstaculos superados: "
+txt_help:   .asciz "\nComandos: Flechas del teclado"
+txt_map1:   .asciz "Principiante"
+txt_map2:   .asciz "Avanzado"

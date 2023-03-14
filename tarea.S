@@ -12,8 +12,9 @@
 #define SEG_FLOAT 0x37e0
 #define SEG_VIDEO 0xa000
 
-#define PLAYER_WIDTH  24
-#define PLAYER_HEIGHT 23
+#define PLAYER_WIDTH  26
+#define PLAYER_HEIGHT 26
+#define PLAYER_FRAMES 4
 
 #define PLAYER_START_X 6
 #define PLAYER_START_Y 50
@@ -201,9 +202,10 @@ move_player:
 	call clear_rect
 
 	pop  di
+	lea  si, [_binary_1_bin_start]
+	add  si, player_sprite_offset
 	mov  ax, SEG_FLOAT
 	mov  ds, ax
-	lea  si, [_binary_nave_bin_start]
 	mov  bx, PLAYER_HEIGHT
 	mov  bp, di
 	mov  dx, di
@@ -340,9 +342,17 @@ draw_player:
 	xor  ax, ax
 	mov  ds, ax
 	mov  player_pos, di
+	lea  si, [_binary_1_bin_start]
+	mov  ax, player_sprite_offset
+	add  si, ax
+	add  ax, PLAYER_WIDTH * PLAYER_HEIGHT
+	cmp  ax, PLAYER_WIDTH * PLAYER_HEIGHT * PLAYER_FRAMES
+	jb   .dont_cycle
+	xor  ax, ax
+.dont_cycle:
+	mov  player_sprite_offset, ax
 	mov  ax, SEG_FLOAT
 	mov  ds, ax
-	lea  si, [_binary_nave_bin_start]
 	mov  bx, PLAYER_HEIGHT
 	mov  cx, PLAYER_WIDTH
 
@@ -482,18 +492,19 @@ win:
 
 #TODO: debería ser .data
 .section .rodata
-player_pos: .word PLAYER_START
-obstaculos: .word 0
-map_seg:    .word SEG_MAP1
-map_start:  .word _binary_map1_bin_start
-text_pos:   .word TEXT_TOP
-text_caret: .word TEXT_TOP
-map_name:   .word txt_map1
-pause:      .byte 0
-timeout_ev: .byte 0
-timer:      .byte 32
-timer_decs: .byte 10
-last_level: .byte 0
+player_pos:           .word PLAYER_START
+obstaculos:           .word 0
+map_seg:              .word SEG_MAP1
+map_start:            .word _binary_map1_bin_start
+text_pos:             .word TEXT_TOP
+text_caret:           .word TEXT_TOP
+map_name:             .word txt_map1
+player_sprite_offset: .word 0
+pause:                .byte 0
+timeout_ev:           .byte 0
+timer:                .byte 32
+timer_decs:           .byte 10
+last_level:           .byte 0
 
 txt_map:    .asciz "Nivel: "
 txt_timer:  .asciz "        Tiempo: "

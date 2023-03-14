@@ -30,6 +30,9 @@ SECTIONS
   .sprites.float . : AT(0x37e00)
   {
     font.o(.sprites)
-    nave.o(.sprites)
+    1.o(.sprites)
+    2.o(.sprites)
+    3.o(.sprites)
+    4.o(.sprites)
   }
 }

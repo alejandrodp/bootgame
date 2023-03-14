@@ -53,7 +53,6 @@ init_graphics:
 	mov  es, ax
 
 	call clear_screen
-	call set_timeout
 
 	mov  di, PLAYER_START
 	call draw_player
@@ -63,6 +62,7 @@ init_graphics:
 	mov  cx, (200000 >> 16)
 	mov  dx, (200000 & 0xffff)
 	int  0x15
+	call set_timeout
 
 .clear_keys:
 	mov  ah, 0x11
@@ -143,8 +143,9 @@ timed_out:
 	jnz  .not_decs
 	mov  byte ptr [timer_decs], 10
 	dec  byte ptr [timer]
-	jz   triple_fault
 	call update_stats
+	cmp  byte ptr [timer], 0
+	je   triple_fault
 .not_decs:
 	jmp  set_timeout
 .frozen:
@@ -217,11 +218,11 @@ move_player:
 	test al, al
 	jz   .test_collisions.row.next
 	cmp  ah, COLOR_BORDER_A
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_BORDER_B
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_OBSTACULO
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_TARGET
 	je   next_level
 .test_collisions.row.next:
@@ -231,11 +232,16 @@ move_player:
 	mov  bp, dx
 	dec  bx
 	jnz  .test_collisions
-
-.draw_at_new_position:
 	xor  ax, ax
 	mov  ds, ax
+	jmp  .draw_at_new_position
 
+.collision:
+	xor  ax, ax
+	mov  ds, ax
+	mov  byte ptr [panic_after_stats], 1
+
+.draw_at_new_position:
 	popf
 	pop  ax
 	jnc  draw_player
@@ -379,8 +385,14 @@ es	stosb
 	mov  ds, ax
 	ret
 
-# Magia
 triple_fault:
+	call stop_timer
+	mov  ah, 0x86
+	mov  cx, (500000 >> 16)
+	mov  dx, (500000 & 0xffff)
+	int  0x15
+
+	# Magia
 	push 0
 	push 0
 	push 0
@@ -463,7 +475,11 @@ update_stats:
 	call putdecimal
 
 	lea  si, txt_help
-	jmp  putstr
+	call putstr
+
+	cmp  byte ptr [panic_after_stats], 0
+	jne  triple_fault
+	ret
 
 clear_text:
 	mov  di, TEXT_TOP
@@ -505,6 +521,7 @@ timeout_ev:           .byte 0
 timer:                .byte 32
 timer_decs:           .byte 10
 last_level:           .byte 0
+panic_after_stats:    .byte 0
 
 txt_map:    .asciz "Nivel: "
 txt_timer:  .asciz "        Tiempo: "

@@ -15,7 +15,7 @@
 #define PLAYER_WIDTH  24
 #define PLAYER_HEIGHT 23
 
-#define PLAYER_START_X 15
+#define PLAYER_START_X 6
 #define PLAYER_START_Y 50
 #define PLAYER_START   XY(PLAYER_START_X, PLAYER_START_Y)
 
@@ -46,11 +46,11 @@ init_graphics:
 	mov  di, PLAYER_START
 	call draw_player
 
-	lea  si, _binary_premio_bin_start
-	mov  di, XY(270, 150)
-	mov  bx, TARGET_HEIGHT
-	mov  cx, TARGET_WIDTH
-	call copy_rect
+#	lea  si, _binary_premio_bin_start
+#	mov  di, XY(270, 150)
+#	mov  bx, TARGET_HEIGHT
+#	mov  cx, TARGET_WIDTH
+#	call copy_rect
 
 read_keycodes:
 	call .fix_ip

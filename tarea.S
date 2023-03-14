@@ -60,6 +60,15 @@ init_graphics:
 	mov  di, PLAYER_START
 	call draw_player
 
+.clear_keys:
+	mov  ah, 0x11
+	int  0x16
+	jz   .clear_keys.end
+	mov  ah, 0x10
+	int  0x16
+	jmp  .clear_keys
+.clear_keys.end:
+
 	lea  si, txt_start
 	call putstr
 	mov  ah, 0x10

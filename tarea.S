@@ -49,14 +49,6 @@ init_graphics:
 	call clear_screen
 	call set_timeout
 
-	mov  ax, map_seg
-	mov  si, map_start
-	mov  ds, ax
-	xor  di, di
-	mov  bx, SCREEN_HEIGHT
-	mov  cx, SCREEN_WIDTH
-	call copy_rect
-
 	mov  di, PLAYER_START
 	call draw_player
 
@@ -321,18 +313,35 @@ clear_screen:
 	xor  di, di
 	mov  bx, SCREEN_HEIGHT
 	mov  cx, SCREEN_WIDTH
-	xor  al, al
 
-clear_rect:
+clear_rect: # di = video index, bx = height, cx = width
 	mov  dx, cx
-	mov  bp, di
-.clear_loop:
-rep	stosb
-	mov  cx, dx
-	add  bp, SCREEN_WIDTH
-	mov  di, bp
+	mov  ax, [map_seg]
+	mov  si, [map_start]
+	mov  ds, ax
+	add  si, di
+	sub  sp, 4
+	mov  bp, sp
+
+.copy_map_loop:
+	mov  [bp + 2], si
+	mov  [bp], di
+.copy_map_row:
+	lodsb
+	stosb
+	loop .copy_map_row
 	dec  bx
-	jnz  .clear_loop
+	jz   .copy_map_loop.end
+	mov  cx, dx
+	mov  si, [bp + 2]
+	mov  di, [bp]
+	add  si, SCREEN_WIDTH
+	add  di, SCREEN_WIDTH
+	jmp  .copy_map_loop
+.copy_map_loop.end:
+	xor  ax, ax
+	mov  ds, ax
+	add  sp, 4
 	ret
 
 draw_player:
@@ -458,7 +467,6 @@ clear_text:
 	mov  di, TEXT_TOP
 	mov  bx, TEXT_AREA_HEIGHT
 	mov  cx, TEXT_AREA_WIDTH
-	xor  al, al
 	call clear_rect
 	mov  word ptr [text_pos], TEXT_TOP
 	mov  word ptr [text_caret], TEXT_TOP

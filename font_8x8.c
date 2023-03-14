@@ -1298,7 +1298,7 @@ int main()
 	{
 		for (int j = 7; j >= 0; --j)
 		{
-			putchar((fontdata_8x8[i] & (1 << j)) ? 0x0f : 0x00);
+			putchar((fontdata_8x8[i] & (1 << j)) ? 0x20 : 0x00);
 		}
 	}
 

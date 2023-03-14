@@ -131,7 +131,9 @@ main_loop:
 	ret
 
 toggle_pause:
-	xor  byte ptr [pause], 1
+	not  byte ptr [pause]
+	call update_stats
+	cmp  byte ptr [pause], 0
 	jnz  stop_timer
 	jmp  set_timeout
 
@@ -144,8 +146,9 @@ timed_out:
 	mov  byte ptr [timer_decs], 10
 	dec  byte ptr [timer]
 	call update_stats
+	lea  si, txt_timeout
 	cmp  byte ptr [timer], 0
-	je   triple_fault
+	je   lose
 .not_decs:
 	jmp  set_timeout
 .frozen:
@@ -387,12 +390,12 @@ es	stosb
 
 triple_fault:
 	call stop_timer
-	mov  ah, 0x86
 	mov  cx, (500000 >> 16)
 	mov  dx, (500000 & 0xffff)
+	mov  ah, 0x86
 	int  0x15
 
-	# Magia
+	# Hechizo para reiniciar el procesador
 	push 0
 	push 0
 	push 0
@@ -474,11 +477,18 @@ update_stats:
 	mov  ax, obstaculos
 	call putdecimal
 
+	cmp  byte ptr [pause], 0
+	je   .not_paused
+	lea  si, txt_paused
+	call putstr
+
+.not_paused:
 	lea  si, txt_help
 	call putstr
 
+	lea  si, txt_lost
 	cmp  byte ptr [panic_after_stats], 0
-	jne  triple_fault
+	jne  lose
 	ret
 
 clear_text:
@@ -499,11 +509,25 @@ win:
 	call stop_timer
 	
 	mov  ah, 0x86
-	mov  cx, (5000000 >> 16)
-	mov  dx, (5000000 & 0xffff)
+	mov  cx, (4500000 >> 16)
+	mov  dx, (4500000 & 0xffff)
 	int  0x15
 
 	jmp triple_fault 
+
+lose:
+	push si
+	call clear_text
+	pop  si
+	call putstr
+
+	call stop_timer
+	mov  cx, (2500000 >> 16)
+	mov  dx, (2500000 & 0xffff)
+	mov  ah, 0x86
+	int  0x15
+
+	jmp  triple_fault
 
 
 #TODO: debería ser .data
@@ -523,11 +547,14 @@ timer_decs:           .byte 10
 last_level:           .byte 0
 panic_after_stats:    .byte 0
 
-txt_map:    .asciz "Nivel: "
-txt_timer:  .asciz "        Tiempo: "
-txt_points: .asciz "s\nObstaculos superados: "
-txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
-txt_map1:   .asciz "Principiante"
-txt_map2:   .asciz "Avanzado"
-txt_winner: .asciz "\n         Felicidades, ha ganado         "
-txt_start:  .asciz "Presione cualquier tecla para iniciar"
+txt_map:     .asciz "Nivel: "
+txt_timer:   .asciz "         Tiempo: "
+txt_points:  .asciz "s\nObstaculos superados: "
+txt_paused:  .asciz "     [PAUSA]"
+txt_help:    .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
+txt_map1:    .asciz "Principiante"
+txt_map2:    .asciz "Avanzado"
+txt_winner:  .asciz "\n         Felicidades, ha ganado!        "
+txt_lost:    .asciz "\n         Felicidades, ha perdido!       "
+txt_timeout: .asciz "\n   Felicidades, se le agoto el tiempo!  "
+txt_start:   .asciz "Presione cualquier tecla para iniciar"

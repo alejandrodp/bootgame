@@ -374,12 +374,15 @@ draw_player:
 	add   si, ax
 	lea   bx, [player_sprites]
 	mov   si, [bx + si]
+	xor   byte ptr [skip_animation], 1
+	jz    .skip_animation
 	add   ax, 2
 	cmp   ax, 2 * PLAYER_FRAMES
 	jb    .dont_cycle
 	xor   ax, ax
 .dont_cycle:
 	mov   [player_sprite_offset], ax
+.skip_animation:
 	mov   ax, SEG_FLOAT
 	mov   ds, ax
 	mov   bx, PLAYER_HEIGHT
@@ -555,6 +558,7 @@ timer_decs:           .byte 10
 last_level:           .byte 0
 panic_after_stats:    .byte 0
 dir_offset:           .byte 8
+skip_animation:       .byte 0
 
 player_sprites:
 	.word _binary_l1_bin_start

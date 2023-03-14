@@ -53,7 +53,6 @@ init_graphics:
 	mov  es, ax
 
 	call clear_screen
-	call set_timeout
 
 	mov  di, PLAYER_START
 	call draw_player
@@ -63,6 +62,7 @@ init_graphics:
 	mov  cx, (200000 >> 16)
 	mov  dx, (200000 & 0xffff)
 	int  0x15
+	call set_timeout
 
 .clear_keys:
 	mov  ah, 0x11
@@ -89,12 +89,15 @@ main_loop:
 	push bx
 
 .loop:
+	cmp  byte ptr [panic_after_stats], 0
+	jne  update_stats
+
 	mov  bp, sp
 	mov  bx, [bp]
 	push bx
 
 .test_timer:
-	test byte ptr timeout_ev, 0x80
+	test byte ptr [timeout_ev], 0x80
 	jz   .test_key
 	call timed_out
 
@@ -131,7 +134,9 @@ main_loop:
 	ret
 
 toggle_pause:
-	xor  byte ptr [pause], 1
+	not  byte ptr [pause]
+	call update_stats
+	cmp  byte ptr [pause], 0
 	jnz  stop_timer
 	jmp  set_timeout
 
@@ -143,8 +148,10 @@ timed_out:
 	jnz  .not_decs
 	mov  byte ptr [timer_decs], 10
 	dec  byte ptr [timer]
-	jz   triple_fault
 	call update_stats
+	lea  si, txt_timeout
+	cmp  byte ptr [timer], 0
+	je   lose
 .not_decs:
 	jmp  set_timeout
 .frozen:
@@ -217,11 +224,11 @@ move_player:
 	test al, al
 	jz   .test_collisions.row.next
 	cmp  ah, COLOR_BORDER_A
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_BORDER_B
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_OBSTACULO
-	je   triple_fault
+	je   .collision
 	cmp  ah, COLOR_TARGET
 	je   next_level
 .test_collisions.row.next:
@@ -231,31 +238,35 @@ move_player:
 	mov  bp, dx
 	dec  bx
 	jnz  .test_collisions
-
-.draw_at_new_position:
 	xor  ax, ax
 	mov  ds, ax
+	jmp  .draw_at_new_position
+
+.collision:
+	xor  ax, ax
+	mov  ds, ax
+	mov  byte ptr [panic_after_stats], 1
+
+.draw_at_new_position:
+	mov  [player_pos], di
 
 	popf
 	pop  ax
-	jnc  draw_player
+	jnc  .redraw_or_stats
 	push ax
 
-	push di
 	mov  ax, SCREEN_WIDTH
 	call test_obstaculos
-
-	pop  di
 	push ax
-	push di
+
+	mov  di, [player_pos]
 	mov  ax, -SCREEN_WIDTH
 	call test_obstaculos
 
-	pop  di
 	pop  bx
 	pop  cx
 	or   ax, bx
-	jz   draw_player
+	jz   .redraw_or_stats
 
 	test cx, cx
 	js   .obstaculos_left
@@ -264,8 +275,11 @@ move_player:
 .obstaculos_left:
 	sub  word ptr [obstaculos], 1
 .obstaculos.update:
-	call draw_player
 	jmp  update_stats
+.redraw_or_stats:
+	cmp  di, XY(0, TEXT_TOP_Y + TEXT_AREA_HEIGHT)
+	jb   update_stats
+	jmp  draw_player
 
 next_level:
 	xor  ax, ax
@@ -274,7 +288,7 @@ next_level:
 	jz   win
 
 	lea  ax, [_binary_map2_bin_start]
-	mov  word ptr map_seg, SEG_MAP2
+	mov  word ptr [map_seg], SEG_MAP2
 	mov  map_start, ax
 	lea  ax, txt_map2
 	mov  map_name, ax
@@ -283,6 +297,7 @@ next_level:
 	mov  byte ptr timer, 74
 	mov  byte ptr [timer_decs], 10
 	mov  byte ptr [timeout_ev], 0
+	mov  word ptr [player_pos], PLAYER_START
 
 	jmp  _start
 
@@ -341,7 +356,7 @@ clear_rect: # di = video index, bx = height, cx = width
 draw_player:
 	xor  ax, ax
 	mov  ds, ax
-	mov  player_pos, di
+	mov  di, player_pos
 	lea  si, [_binary_1_bin_start]
 	mov  ax, player_sprite_offset
 	add  si, ax
@@ -379,8 +394,14 @@ es	stosb
 	mov  ds, ax
 	ret
 
-# Magia
 triple_fault:
+	call stop_timer
+	mov  cx, (500000 >> 16)
+	mov  dx, (500000 & 0xffff)
+	mov  ah, 0x86
+	int  0x15
+
+	# Hechizo para reiniciar el procesador
 	push 0
 	push 0
 	push 0
@@ -431,7 +452,6 @@ putchar:
 	mov  ds, bx
 	lea  si, _binary_font_bin_start
 	xor  ah, ah
-	and  al, 0x7f # ASCII solo tiene 128 caracteres
 	shl  ax, TEXT_SHIFT
 	add  si, ax
 	mov  bx, TEXT_HEIGHT
@@ -462,8 +482,19 @@ update_stats:
 	mov  ax, obstaculos
 	call putdecimal
 
+	cmp  byte ptr [pause], 0
+	je   .not_paused
+	lea  si, txt_paused
+	call putstr
+
+.not_paused:
 	lea  si, txt_help
-	jmp  putstr
+	call putstr
+
+	lea  si, txt_lost
+	cmp  byte ptr [panic_after_stats], 0
+	jne  lose
+	jmp  draw_player
 
 clear_text:
 	mov  di, TEXT_TOP
@@ -483,11 +514,25 @@ win:
 	call stop_timer
 	
 	mov  ah, 0x86
-	mov  cx, (5000000 >> 16)
-	mov  dx, (5000000 & 0xffff)
+	mov  cx, (4500000 >> 16)
+	mov  dx, (4500000 & 0xffff)
 	int  0x15
 
 	jmp triple_fault 
+
+lose:
+	push si
+	call clear_text
+	pop  si
+	call putstr
+
+	call stop_timer
+	mov  cx, (2500000 >> 16)
+	mov  dx, (2500000 & 0xffff)
+	mov  ah, 0x86
+	int  0x15
+
+	jmp  triple_fault
 
 
 #TODO: debería ser .data
@@ -505,12 +550,16 @@ timeout_ev:           .byte 0
 timer:                .byte 32
 timer_decs:           .byte 10
 last_level:           .byte 0
+panic_after_stats:    .byte 0
 
-txt_map:    .asciz "Nivel: "
-txt_timer:  .asciz "        Tiempo: "
-txt_points: .asciz "s\nObstaculos superados: "
-txt_help:   .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
-txt_map1:   .asciz "Principiante"
-txt_map2:   .asciz "Avanzado"
-txt_winner: .asciz "\n         Felicidades, ha ganado         "
-txt_start:  .asciz "Presione cualquier tecla para iniciar"
+txt_map:     .asciz "Nivel: "
+txt_timer:   .asciz "         Tiempo: "
+txt_points:  .asciz "s\nObst\240culos superados: "
+txt_paused:  .asciz "     [PAUSA]"
+txt_help:    .asciz "\nComandos: Flechas, L:pausa, R:reiniciar"
+txt_map1:    .asciz "Principiante"
+txt_map2:    .asciz "Avanzado"
+txt_winner:  .asciz "\n        \255Felicidades, ha ganado!"
+txt_lost:    .asciz "\n        \255Felicidades, ha perdido!"
+txt_timeout: .asciz "\n  \255Felicidades, se le agot\242 el tiempo!"
+txt_start:   .asciz "\1Presione cualquier tecla para iniciar\1"

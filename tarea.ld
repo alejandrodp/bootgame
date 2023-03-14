@@ -30,9 +30,13 @@ SECTIONS
   .sprites.float . : AT(0x37e00)
   {
     font.o(.sprites)
-    1.o(.sprites)
-    2.o(.sprites)
-    3.o(.sprites)
-    4.o(.sprites)
+    l1.o(.sprites)
+    l2.o(.sprites)
+    l3.o(.sprites)
+    l4.o(.sprites)
+    r1.o(.sprites)
+    r2.o(.sprites)
+    r3.o(.sprites)
+    r4.o(.sprites)
   }
 }

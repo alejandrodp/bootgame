@@ -188,11 +188,13 @@ key_up:
 
 key_left:
 	mov   ax, -1
+	mov   byte ptr [dir_offset], 0
 	stc
 	jmp   move_player
 
 key_right:
 	mov   ax, 1
+	mov   byte ptr [dir_offset], 8
 	stc
 	jmp   move_player
 
@@ -213,8 +215,12 @@ move_player:
 	call  clear_rect
 
 	pop   di
-	lea   si, [_binary_1_bin_start]
+	xor   bh, bh
+	mov   bl, [dir_offset]
+	mov   si, bx
 	add   si, [player_sprite_offset]
+	lea   bx, [player_sprites]
+	mov   si, [bx + si]
 	mov   ax, SEG_FLOAT
 	mov   ds, ax
 	mov   bx, PLAYER_HEIGHT
@@ -361,11 +367,15 @@ draw_player:
 	xor   ax, ax
 	mov   ds, ax
 	mov   di, [player_pos]
-	lea   si, [_binary_1_bin_start]
+	xor   bh, bh
+	mov   bl, [dir_offset]
+	mov   si, bx
 	mov   ax, [player_sprite_offset]
 	add   si, ax
-	add   ax, PLAYER_WIDTH * PLAYER_HEIGHT
-	cmp   ax, PLAYER_WIDTH * PLAYER_HEIGHT * PLAYER_FRAMES
+	lea   bx, [player_sprites]
+	mov   si, [bx + si]
+	add   ax, 2
+	cmp   ax, 2 * PLAYER_FRAMES
 	jb    .dont_cycle
 	xor   ax, ax
 .dont_cycle:
@@ -544,6 +554,17 @@ timer:                .byte 32
 timer_decs:           .byte 10
 last_level:           .byte 0
 panic_after_stats:    .byte 0
+dir_offset:           .byte 8
+
+player_sprites:
+	.word _binary_l1_bin_start
+	.word _binary_l2_bin_start
+	.word _binary_l3_bin_start
+	.word _binary_l4_bin_start
+	.word _binary_r1_bin_start
+	.word _binary_r2_bin_start
+	.word _binary_r3_bin_start
+	.word _binary_r4_bin_start
 
 txt_map:     .asciz "Nivel: "
 txt_timer:   .asciz "         Tiempo: "

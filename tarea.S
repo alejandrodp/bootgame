@@ -39,6 +39,8 @@
 #define COLOR_OBSTACULO 0x28
 #define COLOR_TARGET    0x50
 
+
+# Macro para uso de interrupción de delay 15h
 .macro delay, ms
 	mov  ah, 0x86
 	mov  cx, ((\ms * 1000) >> 16)
@@ -51,6 +53,8 @@ _start:
 	# Esto hace algo luego del primer nivel
 	mov   word ptr [obstaculos], 0
 
+
+# Sección inicial de configuración de gráficos y elementos básicos (timer, mapa, jugador)
 init_graphics:
 	mov   ah, 0    # Set display mode
 	mov   al, 0x13 # 13h = 320x200, 256 colors
@@ -85,6 +89,7 @@ init_graphics:
 	call  clear_text
 	call  update_stats
 
+# Bucle principal que procesa las interrupciones de las teclas y el timer
 main_loop:
 	call  .fix_ip
 .fix_ip:
@@ -137,6 +142,7 @@ main_loop:
 	# Bucle, no es un ret real
 	ret
 
+# Cambia el valor de la bandera de pausa
 toggle_pause:
 	not   byte ptr [pause]
 	call  update_stats
@@ -144,6 +150,7 @@ toggle_pause:
 	jnz   stop_timer
 	jmp   set_timeout
 
+# Rutina para procesar un time-out
 timed_out:
 	mov   byte ptr [timeout_ev], 0
 	cmp   byte ptr [pause], 0
@@ -161,6 +168,7 @@ timed_out:
 .frozen:
 	ret
 
+# Rutina para procesar el congelamiento del timer
 stop_timer:
 	mov   ah, 0x83
 	mov   al, 0x01
@@ -168,6 +176,7 @@ stop_timer:
 	mov   byte ptr [timeout_ev], 0
 	ret
 
+Rutine de configuración de un time-out
 set_timeout:
 	mov   ah, 0x83
 	xor   al, al
@@ -181,6 +190,8 @@ set_timeout:
 	pop   es
 	ret
 
+# Estas rutinas procesan la interrución de teclas 
+# y alteran al jugador acorde para desdibujarlo y redibujarlo
 key_up:
 	mov   ax, -SCREEN_WIDTH
 	clc  
@@ -202,6 +213,7 @@ key_down:
 	mov   ax, SCREEN_WIDTH
 	clc
 
+# Rutinas para redibujar al jugador
 move_player:
 	push  ax
 	pushf
@@ -226,6 +238,8 @@ move_player:
 	mov   bx, PLAYER_HEIGHT
 	mov   bp, di
 	mov   dx, di
+
+# Estas rutinas verifican y procesan las colisiones
 .test_collisions:
 	mov   cx, PLAYER_WIDTH
 .test_collisions.row:
@@ -291,6 +305,7 @@ move_player:
 	jb    update_stats
 	jmp   draw_player
 
+# Rutina de salto al siguiente nivel del juego
 next_level:
 	xor   ax, ax
 	mov   ds, ax
@@ -311,6 +326,7 @@ next_level:
 
 	jmp   _start
 
+# Rutina para verificar una colisión con un color que identifica al obstáculo
 test_obstaculos:
 	add   di, ax
 	mov   dl, es:[di]
@@ -363,6 +379,8 @@ clear_rect: # di = video index, bx = height, cx = width
 	add   sp, 4
 	ret
 
+# Rutnia de animación del jugador, 
+# esta rutina procesa los frames del jugador y los dibuja en determinada cantidad para simular el movimiento
 draw_player:
 	xor   ax, ax
 	mov   ds, ax
@@ -388,6 +406,7 @@ draw_player:
 	mov   bx, PLAYER_HEIGHT
 	mov   cx, PLAYER_WIDTH
 
+# Rutina para copiado de sprites a memoria de video
 copy_rect: # di = video index, ds:si = offset, bx = height, cx = width
 	mov   dx, cx
 	mov   bp, di
@@ -411,6 +430,7 @@ es	stosb
 	mov   ds, ax
 	ret
 
+# Rutina de reinicio del sistema
 triple_fault:
 	call  stop_timer
 	delay 500
@@ -424,6 +444,7 @@ triple_fault:
 	xor   ax, ax
 	div   ax
 
+# Rutina de escritura de strings
 putstr:
 	push  si
 .char_loop:
@@ -439,6 +460,7 @@ putstr:
 	add   sp, 2
 	ret
 
+# Rutina de escritura de números decimales
 putdecimal:
 	cmp   ax, 100
 	jae   .bad_digit
@@ -457,6 +479,7 @@ putdecimal:
 .bad_digit:
 	mov   al, '?'
 
+# Rutina de escritura de caracteres
 putchar:
 	cmp   al, '\n'
 	je    .newline
@@ -478,6 +501,7 @@ putchar:
 	mov   word ptr [text_caret], ax
 	ret
 
+# Rutina de actualización de estadísticas
 update_stats:
 	call  clear_text
 
@@ -519,6 +543,7 @@ clear_text:
 	mov   word ptr [text_caret], TEXT_TOP
 	ret
 
+# Rutina ejecutada al ganar el juego
 win:
 	call  clear_text
 
@@ -530,6 +555,7 @@ win:
 
 	jmp   triple_fault 
 
+# Rutina ejecutada al perder el juego
 lose:
 	push  si
 	call  clear_text

@@ -11,6 +11,9 @@ _start:
 	jmp  0x0000:on_known_cs
 
 .text
+
+
+# Configura modos iniciales
 on_known_cs:
 	cld # CLear Direction flag
 	xor  ax, ax
@@ -41,6 +44,8 @@ on_known_cs:
 	call print
 	jmp  halt
 
+
+# Verifica que BIOS está emulando la unidad como HDD y no como floppy
 .dl_is_harddrive:
 	push dx
 
@@ -59,6 +64,9 @@ on_known_cs:
 	push FIRST_READ_SECTORS
 	push 16
 	push NUM_SECTORS
+
+# bucle de lectura de sectores
+# Se encarga de la lectura de los sectores iniciales a memoria
 .read_loop:
 	mov  ax, ss
 	mov  ds, ax
@@ -91,7 +99,6 @@ on_known_cs:
 	add  [bp + 2 + 8], ax
 	jmp  .read_loop
 .read_loop.end:
-
 	cmp  word ptr [0x7e00], 0xbaad
 	jnz  magic_error
 	lea  bp, readok
